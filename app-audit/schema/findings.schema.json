@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "app-audit/findings.schema.json",
+  "title": "App Audit findings",
+  "type": "object",
+  "required": ["schema_version", "audit", "findings", "attack_paths", "coverage"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "audit": {
+      "type": "object",
+      "required": ["date", "mode", "scope", "commit", "baseline"],
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "mode": { "enum": ["full", "scoped", "re-audit"] },
+        "scope": { "type": "string", "description": "What was in scope, in one or two sentences." },
+        "commit": { "type": ["string", "null"], "description": "Commit hash audited, or null if unknown." },
+        "baseline": { "type": ["string", "null"], "description": "Path or date of the previous audit for a re-audit, else null." },
+        "verdict": { "type": "string" }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "attack_paths": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/attack_path" }
+    },
+    "coverage": {
+      "type": "object",
+      "required": ["references_run", "references_skipped", "read_full", "read_partial", "skipped", "open_gaps", "authorized_actions"],
+      "additionalProperties": false,
+      "properties": {
+        "references_run": { "type": "array", "items": { "type": "string" } },
+        "references_skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["reference", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "reference": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "read_full": { "type": "array", "items": { "type": "string" }, "description": "Files or directories read in full." },
+        "read_partial": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "extent"],
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string" },
+              "extent": { "type": "string" }
+            }
+          }
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "open_gaps": { "type": "array", "items": { "type": "string" }, "description": "Boundaries or questions that could not be traced or settled." },
+        "authorized_actions": { "type": "array", "items": { "type": "string" }, "description": "Commands or checks the human authorized and that actually ran. Empty for a read-only audit." }
+      }
+    }
+  },
+  "$defs": {
+    "location": {
+      "type": "object",
+      "required": ["file"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "type": "string" },
+        "line_start": { "type": ["integer", "null"], "minimum": 1 },
+        "line_end": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": ["id", "title", "track", "severity", "evidence", "domain", "locations", "what", "impact", "fix", "verify", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^(SEC|QUAL)-[0-9]{3,}$" },
+        "title": { "type": "string" },
+        "track": { "enum": ["security", "quality"] },
+        "severity": { "enum": ["critical", "high", "medium", "low", "quality"] },
+        "evidence": { "enum": ["confirmed", "likely", "hypothesis"] },
+        "evidence_basis": { "enum": ["code-reading", "tool-output", "runtime-observation"] },
+        "settling_evidence": { "type": ["string", "null"], "description": "For likely and hypothesis: what observation would settle it." },
+        "domain": { "type": "string", "description": "The reference that produced it, for example api-authz or baas." },
+        "ai_failure": { "type": ["string", "null"], "description": "Kind of AI-generated failure, or null." },
+        "locations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/location" } },
+        "what": { "type": "string" },
+        "impact": { "type": "string" },
+        "fix": { "type": "string" },
+        "verify": {
+          "type": "object",
+          "required": ["check", "pass", "fail", "result"],
+          "additionalProperties": false,
+          "properties": {
+            "check": { "type": "string" },
+            "pass": { "type": "string" },
+            "fail": { "type": "string" },
+            "result": { "enum": ["not-run", "passed", "failed", "inconclusive"] }
+          }
+        },
+        "status": { "enum": ["open", "fixed", "regressed", "accepted", "wont-fix"], "description": "Use open for new findings. fixed and regressed are set by a re-audit. accepted and wont-fix only when the owner said so." },
+        "first_seen": { "type": ["string", "null"], "format": "date" },
+        "compliance": { "type": "array", "items": { "type": "string" }, "description": "Optional framework references. Only verified ones." }
+      }
+    },
+    "attack_path": {
+      "type": "object",
+      "required": ["id", "title", "severity", "evidence", "persona", "steps", "uses", "impact"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^PATH-[0-9]{3,}$" },
+        "title": { "type": "string" },
+        "severity": { "enum": ["critical", "high", "medium", "low"] },
+        "evidence": { "enum": ["confirmed", "likely", "hypothesis"], "description": "The weakest grade among the findings it uses." },
+        "persona": { "type": "string" },
+        "steps": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+        "uses": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^(SEC|QUAL)-[0-9]{3,}$" } },
+        "impact": { "type": "string" },
+        "break_the_chain": { "type": "string", "description": "The single fix that breaks the path most cheaply." }
+      }
+    }
+  }
+}
