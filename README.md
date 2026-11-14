@@ -95,7 +95,7 @@ Also included: `schema/findings.schema.json`, the machine-readable findings form
 Claude Code, personal skills folder:
 
 ```bash
-git clone https://github.com/Majorkimo/app-audit.git ~/app-audit-skill
+git clone https://github.com/Majorkimo/app-audit-skill.git ~/app-audit-skill
 mkdir -p ~/.claude/skills
 ln -s ~/app-audit-skill/app-audit ~/.claude/skills/app-audit
 ```
